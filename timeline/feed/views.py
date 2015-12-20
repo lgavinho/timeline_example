@@ -5,12 +5,14 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 from models import Notification
 from serializers import NotificationSerializer
+import stream
 
 
 class JSONResponse(HttpResponse):
     """
     An HttpResponse that renders its content into JSON.
     """
+
     def __init__(self, data, **kwargs):
         content = JSONRenderer().render(data)
         kwargs['content_type'] = 'application/json'
@@ -32,6 +34,16 @@ def notification(request):
         serializer = NotificationSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+
+            # Initialize the client with your api key and secret
+            client = stream.connect('bnk64gtyrsdw', 'bnk64gtyrsdw_SECRET')
+            # For the feed group 'user' and user id 'eric' get the feed
+            eric_feed = client.feed('user', serializer.actor)
+            # Add the activity to the feed
+            eric_feed.add_activity({'actor': serializer.actor, 'verb': serializer.verb, 'object': serializer.object,
+                                    'tweet': serializer.text
+                                    })
+
             return JSONResponse(serializer.data, status=201)
         return JSONResponse(serializer.errors, status=400)
 
